@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>修仙模拟器 - 从凡人到飞升</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #d4af37;
+            --secondary: #8b0000;
+            --bg-dark: #0a0a0a;
+            --text-gold: #ffd700;
+        }
+        
+        body {
+            font-family: 'Noto Serif SC', serif;
+            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #0f0f1e 100%);
+            color: #e0e0e0;
+            overflow-x: hidden;
+        }
+        
+        .title-font {
+            font-family: 'Ma Shan Zheng', cursive;
+        }
+        
+        .cultivation-bg {
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(255, 119, 198, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(255, 215, 0, 0.1) 0%, transparent 50%);
+        }
+        
+        .card-glass {
+            background: rgba(20, 20, 30, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+        
+        .btn-immortal {
+            background: linear-gradient(135deg, #2d2d44 0%, #1a1a2e 100%);
+            border: 2px solid var(--primary);
+            color: var(--text-gold);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-immortal:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.5);
+            background: linear-gradient(135deg, #3d3d54 0%, #2a2a3e 100%);
+        }
+        
+        .btn-immortal::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.2), transparent);
+            transition: 0.5s;
+        }
+        
+        .btn-immortal:hover::before {
+            left: 100%;
+        }
+        
+        .stat-bar {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid rgba(212, 175, 55, 0.3);
+        }
+        
+        .stat-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #8b0000, #d4af37);
+            transition: width 0.5s ease;
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+        }
+        
+        .realm-badge {
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.2), rgba(139, 0, 0, 0.2));
+            border: 1px solid var(--primary);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 5px rgba(212, 175, 55, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(212, 175, 55, 0.8); }
+        }
+        
+        .floating {
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+        
+        .event-card {
+            border-left: 3px solid var(--primary);
+            background: linear-gradient(90deg, rgba(212, 175, 55, 0.1), transparent);
+            transition: all 0.3s;
+        }
+        
+        .event-card:hover {
+            background: linear-gradient(90deg, rgba(212, 175, 55, 0.2), transparent);
+            transform: translateX(5px);
+        }
+        
+        .lightning {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0;
+            background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, transparent 70%);
+            z-index: 50;
+        }
+        
+        .lightning.active {
+            animation: flash 0.5s ease-out;
+        }
+        
+        @keyframes flash {
+            0% { opacity: 0; }
+            10% { opacity: 1; }
+            20% { opacity: 0; }
+            30% { opacity: 0.8; }
+            100% { opacity: 0; }
+        }
+        
+        .scroll-hide::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .scroll-hide::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.3);
+        }
+        
+        .scroll-hide::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 3px;
+        }
+        
+        .tribulation-cloud {
+            background: radial-gradient(circle at center, #4a4a6a 0%, #1a1a2e 100%);
+            animation: storm 3s ease-in-out infinite;
+        }
+        
+        @keyframes storm {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(1.3) drop-shadow(0 0 20px #ff6b6b); }
+        }
+        
+        .hidden { display: none !important; }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .dead {
+            filter: grayscale(100%) brightness(0.5);
+        }
+
+        .root-reveal {
+            animation: rootGlow 2s ease-in-out;
+        }
+
+        @keyframes rootGlow {
+            0%, 100% { text-shadow: 0 0 5px currentColor; }
+            50% { text-shadow: 0 0 20px currentColor, 0 0 40px currentColor; }
+        }
+    </style>
+</head>
+<body class="min-h-screen cultivation-bg">
+    <div id="lightning" class="lightning"></div>
+    
+    <!-- 顶部标题 -->
+    <header class="text-center py-6 relative overflow-hidden">
+        <div class="absolute inset-0 opacity-20">
+            <div class="absolute top-0 left-1/4 w-64 h-64 bg-purple-600 rounded-full filter blur-3xl animate-pulse"></div>
+            <div class="absolute bottom-0 right-1/4 w-64 h-64 bg-blue-600 rounded-full filter blur-3xl animate-pulse delay-1000"></div>
+        </div>
+        <h1 class="title-font text-5xl md:text-7xl text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-yellow-400 to-yellow-600 drop-shadow-lg relative z-10 floating">
+            修仙模拟器
+        </h1>
+        <p class="text-gray-400 mt-2 text-lg tracking-widest">一念成仙 · 一念成魔 · 生死有命</p>
+    </header>
+
+    <main class="container mx-auto px-4 pb-8 max-w-6xl">
+        <!-- 游戏主界面 -->
+        <div id="game-container" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- 左侧：状态面板 -->
+            <div class="lg:col-span-1 space-y-4">
+                <!-- 基础信息 -->
+                <div class="card-glass rounded-2xl p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-2xl font-bold text-yellow-400 title-font" id="player-name">无名修士</h2>
+                        <span id="age-display" class="text-sm text-gray-400">0岁</span>
+                    </div>
+                    
+                    <div id="realm-display" class="realm-badge rounded-lg p-3 text-center mb-4">
+                        <div class="text-xs text-gray-400 mb-1">当前境界</div>
+                        <div class="text-xl font-bold text-yellow-300" id="realm-name">凡人</div>
+                        <div class="text-xs text-gray-500 mt-1" id="realm-desc">尚未踏入仙途</div>
+                    </div>
+
+                    <!-- 灵根显示 -->
+                    <div class="mb-4 p-3 bg-black/30 rounded-lg border border-yellow-600/30 transition-all duration-500" id="root-panel">
+                        <div class="text-xs text-gray-400 mb-2">灵根资质</div>
+                        <div id="spirit-root" class="text-lg font-bold text-cyan-400 root-reveal">未觉醒</div>
+                        <div id="root-quality" class="text-xs text-gray-500 mt-1">需年满12岁检测</div>
+                    </div>
+
+                    <!-- 属性条 -->
+                    <div class="space-y-3">
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-gray-400">寿元</span>
+                                <span class="text-red-400"><span id="lifespan-current">100</span>/<span id="lifespan-max">100</span></span>
+                            </div>
+                            <div class="stat-bar h-2">
+                                <div id="lifespan-bar" class="stat-fill bg-gradient-to-r from-red-600 to-red-400" style="width: 100%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-gray-400">修为</span>
+                                <span class="text-blue-400"><span id="cultivation-current">0</span>/<span id="cultivation-max">100</span></span>
+                            </div>
+                            <div class="stat-bar h-3">
+                                <div id="cultivation-bar" class="stat-fill bg-gradient-to-r from-blue-600 to-cyan-400" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-gray-400">气血</span>
+                                <span class="text-green-400"><span id="health-current">100</span>/<span id="health-max">100</span></span>
+                            </div>
+                            <div class="stat-bar h-2">
+                                <div id="health-bar" class="stat-fill bg-gradient-to-r from-green-600 to-green-400" style="width: 100%"></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-gray-400">心境</span>
+                                <span class="text-purple-400"><span id="mental-current">100</span>/100</span>
+                            </div>
+                            <div class="stat-bar h-2">
+                                <div id="mental-bar" class="stat-fill bg-gradient-to-r from-purple-600 to-pink-400" style="width: 100%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 资源面板 -->
+                <div class="card-glass rounded-2xl p-6">
+                    <h3 class="text-lg font-bold text-yellow-400 mb-3 title-font">储物空间</h3>
+                    <div class="grid grid-cols-2 gap-2 text-sm">
+                        <div class="flex justify-between p-2 bg-black/30 rounded">
+                            <span class="text-gray-400">灵石</span>
+                            <span class="text-yellow-400 font-mono" id="resource-stones">0</span>
+                        </div>
+                        <div class="flex justify-between p-2 bg-black/30 rounded">
+                            <span class="text-gray-400">丹药</span>
+                            <span class="text-red-400 font-mono" id="resource-pills">0</span>
+                        </div>
+                        <div class="flex justify-between p-2 bg-black/30 rounded">
+                            <span class="text-gray-400">法宝</span>
+                            <span class="text-cyan-400 font-mono" id="resource-artifacts">0</span>
+                        </div>
+                        <div class="flex justify-between p-2 bg-black/30 rounded">
+                            <span class="text-gray-400">功法</span>
+                            <span class="text-blue-400 font-mono" id="resource-techniques">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 中间：主操作区 -->
+            <div class="lg:col-span-2 space-y-4">
+                <!-- 场景显示 -->
+                <div class="card-glass rounded-2xl p-8 min-h-[300px] flex flex-col items-center justify-center text-center relative overflow-hidden" id="scene-panel">
+                    <div id="scene-bg" class="absolute inset-0 opacity-20 bg-gradient-to-b from-blue-900/20 to-transparent"></div>
+                    <div class="relative z-10 w-full">
+                        <div id="scene-icon" class="text-6xl mb-4">👶</div>
+                        <h2 id="scene-title" class="text-3xl font-bold text-white mb-4 title-font">出生</h2>
+                        <p id="scene-desc" class="text-gray-300 text-lg leading-relaxed mb-6 max-w-2xl mx-auto">
+                            你出生在一个普通的凡人家庭。天地灵气未开，你尚不知修仙为何物。
+                        </p>
+                        <div id="scene-actions" class="flex flex-wrap gap-3 justify-center">
+                            <button onclick="game.nextYear()" class="btn-immortal px-8 py-3 rounded-lg font-bold text-lg">
+                                成长一岁
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 操作按钮组 -->
+                <div id="action-buttons" class="grid grid-cols-2 md:grid-cols-4 gap-3 hidden">
+                    <button onclick="game.cultivate()" class="btn-immortal py-4 rounded-xl font-bold flex flex-col items-center gap-1">
+                        <span class="text-2xl">🧘</span>
+                        <span>打坐修炼</span>
+                        <span class="text-xs text-gray-400 font-normal">提升修为</span>
+                    </button>
+                    <button onclick="game.explore()" class="btn-immortal py-4 rounded-xl font-bold flex flex-col items-center gap-1">
+                        <span class="text-2xl">🏔️</span>
+                        <span>外出历练</span>
+                        <span class="text-xs text-gray-400 font-normal">寻找机缘</span>
+                    </button>
+                    <button onclick="game.seclusion()" class="btn-immortal py-4 rounded-xl font-bold flex flex-col items-center gap-1">
+                        <span class="text-2xl">⛩️</span>
+                        <span>闭关突破</span>
+                        <span class="text-xs text-gray-400 font-normal">冲击瓶颈</span>
+                    </button>
+                    <button onclick="game.usePill()" class="btn-immortal py-4 rounded-xl font-bold flex flex-col items-center gap-1">
+                        <span class="text-2xl">💊</span>
+                        <span>服用丹药</span>
+                        <span class="text-xs text-gray-400 font-normal">恢复状态</span>
+                    </button>
+                </div>
+
+                <!-- 事件日志 -->
+                <div class="card-glass rounded-2xl p-6">
+                    <h3 class="text-lg font-bold text-yellow-400 mb-3 title-font flex items-center gap-2">
+                        <span>📜</span>
+                        <span>修仙日志</span>
+                    </h3>
+                    <div id="event-log" class="space-y-2 max-h-64 overflow-y-auto scroll-hide pr-2">
+                        <div class="text-gray-500 text-sm italic">修仙之路，由此开始...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 开始界面 -->
+        <div id="start-screen" class="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4">
+            <div class="max-w-md w-full text-center">
+                <h1 class="title-font text-6xl text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 to-yellow-600 mb-6">
+                    修仙模拟器
+                </h1>
+                <p class="text-gray-400 mb-8 text-lg">从呱呱坠地的婴儿，到羽化飞升的仙人<br>你的一生，由你书写</p>
+                
+                <div class="space-y-4 mb-8">
+                    <input type="text" id="input-name" placeholder="输入道号（留空随机）" 
+                           class="w-full px-6 py-3 bg-gray-900 border border-yellow-600/50 rounded-lg text-center text-white placeholder-gray-600 focus:outline-none focus:border-yellow-400">
+                </div>
+
+                <button onclick="game.start()" class="btn-immortal w-full py-4 rounded-xl font-bold text-xl mb-4">
+                    踏入仙途
+                </button>
+                
+                <div class="text-xs text-gray-600 mt-4">
+                    <p>提示：灵根资质决定修炼速度，机缘影响奇遇概率</p>
+                    <p>寿元耗尽或遭遇不测将导致身死道消</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 结束界面 -->
+        <div id="end-screen" class="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4 hidden">
+            <div class="max-w-lg w-full text-center card-glass p-8 rounded-2xl">
+                <div id="end-icon" class="text-6xl mb-4">☠️</div>
+                <h2 id="end-title" class="title-font text-4xl text-white mb-4">身死道消</h2>
+                <p id="end-desc" class="text-gray-300 mb-6 text-lg"></p>
+                
+                <div class="bg-black/50 rounded-lg p-4 mb-6 text-left space-y-2 text-sm">
+                    <div class="flex justify-between"><span class="text-gray-400">享年：</span><span class="text-white" id="end-age"></span></div>
+                    <div class="flex justify-between"><span class="text-gray-400">境界：</span><span class="text-yellow-400" id="end-realm"></span></div>
+                    <div class="flex justify-between"><span class="text-gray-400">灵根：</span><span class="text-cyan-400" id="end-root"></span></div>
+                    <div class="flex justify-between"><span class="text-gray-400">评价：</span><span class="text-purple-400" id="end-rank"></span></div>
+                </div>
+
+                <button onclick="location.reload()" class="btn-immortal w-full py-3 rounded-xl font-bold">
+                    转世重修
+                </button>
+            </div>
+        </div>
+
+        <!-- 突破界面 -->
+        <div id="breakthrough-screen" class="fixed inset-0 bg-black/90 z-40 flex items-center justify-center p-4 hidden">
+            <div class="max-w-md w-full text-center">
+                <div class="tribulation-cloud rounded-full w-48 h-48 mx-auto mb-6 flex items-center justify-center relative">
+                    <div class="absolute inset-0 rounded-full animate-ping bg-purple-500/20"></div>
+                    <span class="text-6xl">⚡</span>
+                </div>
+                <h2 class="title-font text-3xl text-yellow-400 mb-4">天劫降临</h2>
+                <p class="text-gray-300 mb-6" id="tribulation-desc">雷云滚滚，九重天劫即将落下...</p>
+                <div class="flex gap-4 justify-center">
+                    <button onclick="game.resistTribulation()" class="btn-immortal px-8 py-3 rounded-lg font-bold">
+                        硬抗天劫
+                    </button>
+                    <button onclick="game.useArtifact()" class="btn-immortal px-8 py-3 rounded-lg font-bold border-blue-400 text-blue-400">
+                        祭出法宝
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // 游戏配置
+        const CONFIG = {
+            realms: [
+                { name: '凡人', max: 0, lifespan: 100, desc: '尚未踏入仙途' },
+                { name: '炼气期', max: 100, lifespan: 150, desc: '引气入体，初窥门径' },
+                { name: '筑基期', max: 300, lifespan: 200, desc: '道基初筑，脱胎换骨' },
+                { name: '金丹期', max: 600, lifespan: 300, desc: '金丹大道，寿元倍增' },
+                { name: '元婴期', max: 1200, lifespan: 500, desc: '元婴初成，神识外放' },
+                { name: '化神期', max: 2500, lifespan: 800, desc: '元神出窍，感悟天地' },
+                { name: '炼虚期', max: 5000, lifespan: 1200, desc: '炼虚合道，触摸法则' },
+                { name: '合体期', max: 10000, lifespan: 2000, desc: '天人合一，法力无边' },
+                { name: '大乘期', max: 20000, lifespan: 3000, desc: '大乘圆满，半步真仙' },
+                { name: '渡劫期', max: 50000, lifespan: 5000, desc: '渡劫飞升，九死一生' },
+                { name: '真仙', max: 999999, lifespan: 99999, desc: '飞升仙界，与天地同寿' }
+            ],
+            roots: [
+                { name: '废灵根', quality: 0.3, chance: 15, color: 'text-gray-500', desc: '修炼速度极慢，几乎无法突破' },
+                { name: '伪灵根', quality: 0.5, chance: 25, color: 'text-red-400', desc: '四属性混杂，修炼艰难' },
+                { name: '真灵根', quality: 0.8, chance: 30, color: 'text-blue-400', desc: '两三种属性，修炼速度一般' },
+                { name: '天灵根', quality: 1.2, chance: 20, color: 'text-purple-400', desc: '单一属性，修炼速度极快' },
+                { name: '变异灵根', quality: 1.5, chance: 8, color: 'text-pink-400', desc: '特殊变异，修炼神速' },
+                { name: '混沌灵根', quality: 2.0, chance: 2, color: 'text-yellow-400', desc: '五行俱全，万法不侵' }
+            ],
+            elements: ['金', '木', '水', '火', '土', '风', '雷', '冰'],
+            events: {
+                child: [
+                    { text: '你出生在农家，家境贫寒，但身体健壮', effect: () => ({ health: 10 }) },
+                    { text: '你出生在书香门第，自幼聪慧过人', effect: () => ({ mental: 10 }) },
+                    { text: '你出生在商贾之家，锦衣玉食', effect: () => ({ stones: 100 }) },
+                    { text: '你出生在官宦世家，气质不凡', effect: () => ({ luck: 5 }) },
+                    { text: '你自幼父母双亡，被老道士收养', effect: () => ({ rootBonus: 0.1 }) }
+                ],
+                teen: [
+                    { text: '山中偶遇灵果，误食后体质改善', effect: () => ({ health: 20, cultivation: 10 }) },
+                    { text: '救下受伤灵兽，获得灵石答谢', effect: () => ({ stones: 50, luck: 2 }) },
+                    { text: '跌落悬崖，意外发现前辈洞府', effect: () => ({ technique: 1, cultivation: 50 }) },
+                    { text: '被路过的仙人发现灵根，赠予基础功法', effect: () => ({ cultivation: 30 }) }
+                ],
+                adult: [
+                    { text: '在坊市淘到残破法宝', effect: () => ({ artifact: 1 }) },
+                    { text: '炼丹时发生炸炉，受伤不轻', effect: () => ({ health: -30 }) },
+                    { text: '心魔入侵，险些走火入魔', effect: () => ({ mental: -20 }) },
+                    { text: '观日出而悟道，修为大涨', effect: () => ({ cultivation: 100, mental: 10 }) }
+                ]
+            }
+        };
+
+        class CultivationGame {
+            constructor() {
+                this.player = {
+                    name: '',
+                    age: 0,
+                    realm: 0,
+                    cultivation: 0,
+                    health: 100,
+                    maxHealth: 100,
+                    mental: 100,
+                    lifespan: 100,
+                    maxLifespan: 100,
+                    root: null,
+                    rootElement: '',
+                    rootRevealed: false,  // 新增：标记灵根是否已显示
+                    luck: 50,
+                    stones: 0,
+                    pills: 0,
+                    artifacts: 0,
+                    techniques: 0,
+                    status: []
+                };
+                this.history = [];
+                this.isDead = false;
+                this.inTribulation = false;
+                this.awaitingRootChoice = false;  // 新增：标记是否在等待灵根选择
+            }
+
+            start() {
+                const nameInput = document.getElementById('input-name').value.trim();
+                this.player.name = nameInput || this.generateName();
+                
+                // 生成灵根（但先不显示）
+                this.generateSpiritRoot();
+                
+                // 隐藏开始界面
+                document.getElementById('start-screen').classList.add('hidden');
+                
+                this.updateUI();
+                this.log('你睁开了眼睛，开始了修仙之路...', 'system');
+                this.log('年满12岁时将进行灵根检测', 'info');
+            }
+
+            generateName() {
+                const surnames = ['李', '王', '张', '刘', '陈', '杨', '赵', '黄', '周', '吴', '徐', '孙', '胡', '朱', '高', '林', '欧阳', '慕容', '司徒'];
+                const names = ['逍遥', '长生', '悟道', '玄机', '凌霄', '御风', '天行', '若水', '无尘', '明月', '青松', '紫阳', '寒霜', '烈阳', '星河'];
+                return surnames[Math.floor(Math.random() * surnames.length)] + names[Math.floor(Math.random() * names.length)];
+            }
+
+            generateSpiritRoot() {
+                const rand = Math.random() * 100;
+                let cumulative = 0;
+                let selectedRoot = CONFIG.roots[0];
+                
+                for (let root of CONFIG.roots) {
+                    cumulative += root.chance;
+                    if (rand <= cumulative) {
+                        selectedRoot = root;
+                        break;
+                    }
+                }
+                
+                this.player.root = selectedRoot;
+                this.player.rootElement = CONFIG.elements[Math.floor(Math.random() * 5)];
+                
+                if (selectedRoot.name === '混沌灵根') {
+                    this.player.luck += 20;
+                    this.player.maxLifespan += 50;
+                }
+            }
+
+            nextYear() {
+                if (this.isDead) return;
+                if (this.awaitingRootChoice) {
+                    this.log('请先处理灵根觉醒！', 'warning');
+                    return;
+                }
+                
+                this.player.age++;
+                
+                // 检查年龄事件
+                if (this.checkAgeEvents()) {
+                    this.updateUI();
+                    return; // 有特殊事件，暂停常规流程
+                }
+                
+                // 自然恢复
+                this.player.health = Math.min(this.player.maxHealth, this.player.health + 5);
+                this.player.mental = Math.min(100, this.player.mental + 3);
+                
+                // 寿元检查
+                if (this.player.age >= this.player.lifespan) {
+                    this.die('寿元耗尽，坐化而终');
+                    return;
+                }
+                
+                // 随机事件
+                if (Math.random() < 0.3 && this.player.age > 12) {
+                    this.randomEvent();
+                }
+                
+                this.updateUI();
+            }
+
+            checkAgeEvents() {
+                const age = this.player.age;
+                
+                if (age === 0) {
+                    this.setScene('👶', '出生', '你出生在一个普通的凡人家庭。天地灵气未开，你尚不知修仙为何物。');
+                    return false;
+                } else if (age === 6) {
+                    this.setScene('📚', '启蒙', '你开始接受启蒙教育，展现出过人的聪慧。');
+                    return false;
+                } else if (age === 12 && !this.player.rootRevealed) {
+                    // 灵根检测事件 - 关键修复点
+                    this.awaitingRootChoice = true;
+                    this.setScene(
+                        '✨', 
+                        '灵根觉醒', 
+                        `年满12岁，天地灵气汇聚！<br><br>
+                        <span class="text-yellow-400 text-xl">检测到${this.player.rootElement}属性${this.player.root.name}！</span><br>
+                        <span class="text-gray-400 text-sm">${this.player.root.desc}</span><br><br>
+                        <span class="text-cyan-400">修炼速度：${(this.player.root.quality * 100).toFixed(0)}%</span>`,
+                        [
+                            { 
+                                text: '开始修炼', 
+                                action: 'game.startCultivation()' 
+                            }
+                        ]
+                    );
+                    return true; // 暂停流程，等待用户点击
+                } else if (age === 18 && this.player.realm > 0) {
+                    this.setScene('🗡️', '下山历练', '你已成年，可以下山历练，寻找机缘。');
+                    return false;
+                } else if (age % 10 === 0 && age > 20) {
+                    this.setScene('🎂', `${age}岁大寿`, `你今年${age}岁了，修为已达${CONFIG.realms[this.player.realm].name}。`);
+                    return false;
+                }
+                return false;
+            }
+
+            startCultivation() {
+                // 关键修复：标记灵根已显示，并开始修炼
+                this.player.rootRevealed = true;
+                this.awaitingRootChoice = false;
+                this.player.realm = 1;
+                this.player.cultivation = 0;
+                this.player.maxLifespan = CONFIG.realms[1].lifespan;
+                this.player.lifespan = this.player.maxLifespan;
+                
+                this.log(`灵根觉醒：${this.player.rootElement}${this.player.root.name}！`, 'success');
+                this.log('引气入体成功，踏入炼气期！', 'success');
+                
+                // 显示操作按钮
+                document.getElementById('action-buttons').classList.remove('hidden');
+                
+                this.setScene('🧘', '炼气期', '你成功引气入体，正式踏入修仙之路。现在你可以通过下方按钮进行修炼。');
+                this.updateUI();
+            }
+
+            cultivate() {
+                if (this.player.realm === 0) {
+                    this.log('尚未觉醒灵根，无法修炼！', 'error');
+                    return;
+                }
+
+                const baseGain = 10;
+                const rootBonus = this.player.root.quality;
+                const luckBonus = this.player.luck / 100;
+                const gain = Math.floor(baseGain * rootBonus * (1 + luckBonus) * (0.8 + Math.random() * 0.4));
+                
+                this.player.cultivation += gain;
+                this.player.mental -= 2;
+                
+                const msgs = [
+                    `运转周天，吸收${this.player.rootElement}灵气，修为增加${gain}点`,
+                    '感悟天道，心境略有提升',
+                    '经脉通畅，灵气运行如意',
+                    `${this.player.rootElement}气入体，浑身舒泰`
+                ];
+                this.log(msgs[Math.floor(Math.random() * msgs.length)], 'info');
+                
+                if (this.player.mental < 30 && Math.random() < 0.3) {
+                    this.heartDevil();
+                }
+                
+                this.checkBreakthrough();
+                this.nextYear();
+            }
+
+            explore() {
+                const events = [
+                    { 
+                        text: '在山中发现千年灵芝，炼化后修为大增', 
+                        effect: () => {
+                            this.player.cultivation += 50;
+                            this.player.pills += 1;
+                            return '获得筑基丹材料';
+                        }
+                    },
+                    { 
+                        text: '遭遇妖兽袭击，重伤逃回', 
+                        effect: () => {
+                            this.player.health -= 40;
+                            if (this.player.health <= 0) this.die('葬身兽口');
+                            return '身受重伤';
+                        }
+                    },
+                    { 
+                        text: '误入古修洞府，获得传承', 
+                        effect: () => {
+                            this.player.techniques += 1;
+                            this.player.cultivation += 100;
+                            this.player.stones += 200;
+                            return '获得功法与灵石';
+                        }
+                    },
+                    { 
+                        text: '救助受伤散修，获赠法宝', 
+                        effect: () => {
+                            this.player.artifacts += 1;
+                            this.player.luck += 5;
+                            return '获得下品法器';
+                        }
+                    },
+                    { 
+                        text: '在坊市淘到残缺玉简', 
+                        effect: () => {
+                            this.player.techniques += 0.5;
+                            return '似乎记载着某种秘术';
+                        }
+                    }
+                ];
+                
+                const event = events[Math.floor(Math.random() * events.length)];
+                const result = event.effect();
+                this.log(`${event.text} - ${result}`, 'event');
+                
+                this.nextYear();
+            }
+
+            seclusion() {
+                if (this.player.realm === 0) {
+                    this.log('尚未踏入仙途，无法闭关', 'error');
+                    return;
+                }
+                
+                const required = CONFIG.realms[this.player.realm].max;
+                const progress = this.player.cultivation / required;
+                
+                if (progress < 0.8) {
+                    this.log('修为不足，闭关突破成功率极低', 'warning');
+                    return;
+                }
+                
+                if (this.player.realm >= 3 && Math.random() < 0.5) {
+                    this.showTribulation();
+                } else {
+                    this.attemptBreakthrough();
+                }
+            }
+
+            usePill() {
+                if (this.player.pills <= 0) {
+                    this.log('没有丹药可用！', 'error');
+                    return;
+                }
+                
+                this.player.pills--;
+                const heal = 50;
+                const mental = 30;
+                this.player.health = Math.min(this.player.maxHealth, this.player.health + heal);
+                this.player.mental = Math.min(100, this.player.mental + mental);
+                this.log(`服用丹药，恢复${heal}点气血和${mental}点心境`, 'success');
+                this.updateUI();
+            }
+
+            showTribulation() {
+                this.inTribulation = true;
+                document.getElementById('breakthrough-screen').classList.remove('hidden');
+                document.getElementById('tribulation-desc').textContent = 
+                    `${CONFIG.realms[this.player.realm].name}天劫即将降临，九死一生！`;
+            }
+
+            resistTribulation() {
+                const success = Math.random() < (0.3 + this.player.health / 200 + this.player.artifacts * 0.1);
+                document.getElementById('breakthrough-screen').classList.add('hidden');
+                
+                if (success) {
+                    this.flashLightning();
+                    setTimeout(() => this.breakthroughSuccess(), 500);
+                } else {
+                    this.player.health -= 50;
+                    this.log('渡劫失败，身受重伤，修为跌落', 'error');
+                    this.player.cultivation *= 0.5;
+                    if (this.player.health <= 0) this.die('死于天劫之下');
+                }
+                this.inTribulation = false;
+                this.nextYear();
+            }
+
+            useArtifact() {
+                if (this.player.artifacts > 0) {
+                    this.player.artifacts--;
+                    this.log('祭出法宝抵挡天劫！', 'success');
+                    setTimeout(() => {
+                        document.getElementById('breakthrough-screen').classList.add('hidden');
+                        this.breakthroughSuccess();
+                        this.inTribulation = false;
+                        this.nextYear();
+                    }, 1000);
+                } else {
+                    this.log('没有可用法宝！', 'error');
+                }
+            }
+
+            attemptBreakthrough() {
+                const required = CONFIG.realms[this.player.realm].max;
+                const chance = 0.5 + (this.player.cultivation - required * 0.8) / (required * 0.4);
+                
+                if (Math.random() < chance) {
+                    this.breakthroughSuccess();
+                } else {
+                    this.log('突破失败，瓶颈稳固，需积累更多修为', 'warning');
+                    this.player.mental -= 10;
+                }
+                this.nextYear();
+            }
+
+            breakthroughSuccess() {
+                if (this.player.realm >= CONFIG.realms.length - 1) {
+                    this.ascend();
+                    return;
+                }
+                
+                this.player.realm++;
+                const newRealm = CONFIG.realms[this.player.realm];
+                this.player.maxLifespan = newRealm.lifespan;
+                this.player.lifespan = Math.max(this.player.lifespan, this.player.age + newRealm.lifespan * 0.3);
+                this.player.cultivation = 0;
+                this.player.maxHealth += 50;
+                this.player.health = this.player.maxHealth;
+                
+                this.log(`突破成功！踏入${newRealm.name}！寿元增加至${newRealm.lifespan}年`, 'success');
+                this.updateUI();
+            }
+
+            heartDevil() {
+                this.log('心魔入侵！道心不稳！', 'error');
+                const damage = Math.floor(Math.random() * 30) + 10;
+                this.player.mental -= damage;
+                if (this.player.mental <= 0) {
+                    this.die('走火入魔，爆体而亡');
+                }
+            }
+
+            randomEvent() {
+                const age = this.player.age;
+                let pool = [];
+                
+                if (age < 12) pool = CONFIG.events.child;
+                else if (age < 30) pool = CONFIG.events.teen;
+                else pool = CONFIG.events.adult;
+                
+                if (pool.length > 0) {
+                    const event = pool[Math.floor(Math.random() * pool.length)];
+                    const result = event.effect();
+                    
+                    if (result.health) this.player.health = Math.min(this.player.maxHealth, this.player.health + result.health);
+                    if (result.mental) this.player.mental = Math.min(100, this.player.mental + result.mental);
+                    if (result.cultivation) this.player.cultivation += result.cultivation;
+                    if (result.stones) this.player.stones += result.stones;
+                    if (result.luck) this.player.luck += result.luck;
+                    if (result.technique) this.player.techniques += result.technique;
+                    if (result.artifact) this.player.artifacts += result.artifact;
+                    if (result.rootBonus) this.player.root.quality += result.rootBonus;
+                    
+                    this.log(event.text, 'event');
+                }
+            }
+
+            ascend() {
+                this.isDead = true;
+                document.getElementById('end-screen').classList.remove('hidden');
+                document.getElementById('end-icon').textContent = '☁️';
+                document.getElementById('end-title').textContent = '飞升仙界';
+                document.getElementById('end-title').className = 'title-font text-4xl text-yellow-400 mb-4';
+                document.getElementById('end-desc').textContent = '你成功渡过九重天劫，羽化飞升，成为真仙！';
+                document.getElementById('end-age').textContent = this.player.age + '岁';
+                document.getElementById('end-realm').textContent = '真仙';
+                document.getElementById('end-root').textContent = this.player.rootElement + this.player.root.name;
+                document.getElementById('end-rank').textContent = 'S+ (完美飞升)';
+            }
+
+            die(reason) {
+                this.isDead = true;
+                document.getElementById('end-screen').classList.remove('hidden');
+                document.getElementById('end-desc').textContent = reason;
+                document.getElementById('end-age').textContent = this.player.age + '岁';
+                document.getElementById('end-realm').textContent = CONFIG.realms[this.player.realm].name;
+                document.getElementById('end-root').textContent = this.player.rootRevealed ? 
+                    (this.player.rootElement + this.player.root.name) : '未觉醒';
+                
+                let rank = 'D';
+                if (this.player.realm >= 9) rank = 'A';
+                else if (this.player.realm >= 7) rank = 'B';
+                else if (this.player.realm >= 5) rank = 'C';
+                if (this.player.age < 100 && this.player.realm > 3) rank += '+';
+                
+                document.getElementById('end-rank').textContent = rank;
+                document.getElementById('game-container').classList.add('dead');
+            }
+
+            setScene(icon, title, desc, actions = null) {
+                document.getElementById('scene-icon').textContent = icon;
+                document.getElementById('scene-title').textContent = title;
+                document.getElementById('scene-desc').innerHTML = desc;
+                
+                const actionsDiv = document.getElementById('scene-actions');
+                if (actions) {
+                    actionsDiv.innerHTML = actions.map(a => 
+                        `<button onclick="${a.action}" class="btn-immortal px-6 py-2 rounded-lg">${a.text}</button>`
+                    ).join('');
+                } else {
+                    actionsDiv.innerHTML = '<button onclick="game.nextYear()" class="btn-immortal px-8 py-3 rounded-lg font-bold text-lg">成长一岁</button>';
+                }
+            }
+
+            log(msg, type = 'normal') {
+                const logDiv = document.getElementById('event-log');
+                const entry = document.createElement('div');
+                entry.className = 'event-card p-3 rounded text-sm fade-in';
+                
+                const colors = {
+                    normal: 'text-gray-300',
+                    success: 'text-green-400',
+                    error: 'text-red-400',
+                    warning: 'text-yellow-400',
+                    info: 'text-blue-400',
+                    event: 'text-purple-400',
+                    system: 'text-cyan-400 font-bold'
+                };
+                
+                const time = `[${this.player.age}岁] `;
+                entry.innerHTML = `<span class="text-gray-500 text-xs">${time}</span><span class="${colors[type] || 'text-gray-300'}">${msg}</span>`;
+                
+                logDiv.insertBefore(entry, logDiv.firstChild);
+                
+                while (logDiv.children.length > 50) {
+                    logDiv.removeChild(logDiv.lastChild);
+                }
+            }
+
+            flashLightning() {
+                const lightning = document.getElementById('lightning');
+                lightning.classList.add('active');
+                setTimeout(() => lightning.classList.remove('active'), 500);
+            }
+
+            updateUI() {
+                document.getElementById('player-name').textContent = this.player.name;
+                document.getElementById('age-display').textContent = this.player.age + '岁';
+                
+                const realm = CONFIG.realms[this.player.realm];
+                document.getElementById('realm-name').textContent = realm.name;
+                document.getElementById('realm-desc').textContent = realm.desc;
+                
+                // 关键修复：灵根显示逻辑
+                const rootDiv = document.getElementById('spirit-root');
+                const rootQualityDiv = document.getElementById('root-quality');
+                const rootPanel = document.getElementById('root-panel');
+                
+                if (!this.player.rootRevealed) {
+                    rootDiv.textContent = '未觉醒';
+                    rootDiv.className = 'text-lg font-bold text-gray-500';
+                    rootQualityDiv.textContent = '需年满12岁检测';
+                    rootPanel.classList.remove('border-yellow-400');
+                } else {
+                    rootDiv.textContent = `${this.player.rootElement}灵根`;
+                    rootDiv.className = `text-lg font-bold ${this.player.root.color} root-reveal`;
+                    rootQualityDiv.textContent = `${this.player.root.name} (修炼速度${(this.player.root.quality * 100).toFixed(0)}%)`;
+                    rootPanel.classList.add('border-yellow-400');
+                }
+                
+                const lifespanPercent = (this.player.lifespan / this.player.maxLifespan) * 100;
+                document.getElementById('lifespan-current').textContent = Math.floor(this.player.lifespan);
+                document.getElementById('lifespan-max').textContent = this.player.maxLifespan;
+                document.getElementById('lifespan-bar').style.width = lifespanPercent + '%';
+                
+                const cultPercent = this.player.realm === 0 ? 0 : 
+                    Math.min(100, (this.player.cultivation / realm.max) * 100);
+                document.getElementById('cultivation-current').textContent = Math.floor(this.player.cultivation);
+                document.getElementById('cultivation-max').textContent = realm.max;
+                document.getElementById('cultivation-bar').style.width = cultPercent + '%';
+                
+                const healthPercent = (this.player.health / this.player.maxHealth) * 100;
+                document.getElementById('health-current').textContent = Math.floor(this.player.health);
+                document.getElementById('health-max').textContent = this.player.maxHealth;
+                document.getElementById('health-bar').style.width = healthPercent + '%';
+                
+                document.getElementById('mental-current').textContent = Math.floor(this.player.mental);
+                document.getElementById('mental-bar').style.width = this.player.mental + '%';
+                
+                document.getElementById('resource-stones').textContent = this.player.stones;
+                document.getElementById('resource-pills').textContent = this.player.pills;
+                document.getElementById('resource-artifacts').textContent = this.player.artifacts;
+                document.getElementById('resource-techniques').textContent = this.player.techniques;
+            }
+        }
+
+        const game = new CultivationGame();
+    </script>
+</body>
+</html>
