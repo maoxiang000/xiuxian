@@ -172,13 +172,17 @@
             to { opacity: 1; transform: translateY(0); }
         }
         
-        .luck-star {
-            color: #ffd700;
-            text-shadow: 0 0 10px #ffd700;
-        }
-        
         .dead {
             filter: grayscale(100%) brightness(0.5);
+        }
+
+        .root-reveal {
+            animation: rootGlow 2s ease-in-out;
+        }
+
+        @keyframes rootGlow {
+            0%, 100% { text-shadow: 0 0 5px currentColor; }
+            50% { text-shadow: 0 0 20px currentColor, 0 0 40px currentColor; }
         }
     </style>
 </head>
@@ -217,10 +221,10 @@
                     </div>
 
                     <!-- 灵根显示 -->
-                    <div class="mb-4 p-3 bg-black/30 rounded-lg border border-yellow-600/30">
+                    <div class="mb-4 p-3 bg-black/30 rounded-lg border border-yellow-600/30 transition-all duration-500" id="root-panel">
                         <div class="text-xs text-gray-400 mb-2">灵根资质</div>
-                        <div id="spirit-root" class="text-lg font-bold text-cyan-400">未检测</div>
-                        <div id="root-quality" class="text-xs text-gray-500 mt-1"></div>
+                        <div id="spirit-root" class="text-lg font-bold text-cyan-400 root-reveal">未觉醒</div>
+                        <div id="root-quality" class="text-xs text-gray-500 mt-1">需年满12岁检测</div>
                     </div>
 
                     <!-- 属性条 -->
@@ -289,12 +293,6 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- 特殊状态 -->
-                <div id="status-effects" class="card-glass rounded-2xl p-4 hidden">
-                    <h3 class="text-sm font-bold text-gray-400 mb-2">状态效果</h3>
-                    <div id="status-list" class="flex flex-wrap gap-2"></div>
-                </div>
             </div>
 
             <!-- 中间：主操作区 -->
@@ -333,10 +331,10 @@
                         <span>闭关突破</span>
                         <span class="text-xs text-gray-400 font-normal">冲击瓶颈</span>
                     </button>
-                    <button onclick="game.alchemy()" class="btn-immortal py-4 rounded-xl font-bold flex flex-col items-center gap-1">
-                        <span class="text-2xl">⚗️</span>
-                        <span>炼丹炼器</span>
-                        <span class="text-xs text-gray-400 font-normal">辅助修行</span>
+                    <button onclick="game.usePill()" class="btn-immortal py-4 rounded-xl font-bold flex flex-col items-center gap-1">
+                        <span class="text-2xl">💊</span>
+                        <span>服用丹药</span>
+                        <span class="text-xs text-gray-400 font-normal">恢复状态</span>
                     </button>
                 </div>
 
@@ -435,12 +433,12 @@
                 { name: '真仙', max: 999999, lifespan: 99999, desc: '飞升仙界，与天地同寿' }
             ],
             roots: [
-                { name: '废灵根', quality: 0.3, chance: 15, desc: '修炼速度极慢，几乎无法突破' },
-                { name: '伪灵根', quality: 0.5, chance: 25, desc: '四属性混杂，修炼艰难' },
-                { name: '真灵根', quality: 0.8, chance: 30, desc: '两三种属性，修炼速度一般' },
-                { name: '天灵根', quality: 1.2, chance: 20, desc: '单一属性，修炼速度极快' },
-                { name: '变异灵根', quality: 1.5, chance: 8, desc: '特殊变异，修炼神速' },
-                { name: '混沌灵根', quality: 2.0, chance: 2, desc: '五行俱全，万法不侵' }
+                { name: '废灵根', quality: 0.3, chance: 15, color: 'text-gray-500', desc: '修炼速度极慢，几乎无法突破' },
+                { name: '伪灵根', quality: 0.5, chance: 25, color: 'text-red-400', desc: '四属性混杂，修炼艰难' },
+                { name: '真灵根', quality: 0.8, chance: 30, color: 'text-blue-400', desc: '两三种属性，修炼速度一般' },
+                { name: '天灵根', quality: 1.2, chance: 20, color: 'text-purple-400', desc: '单一属性，修炼速度极快' },
+                { name: '变异灵根', quality: 1.5, chance: 8, color: 'text-pink-400', desc: '特殊变异，修炼神速' },
+                { name: '混沌灵根', quality: 2.0, chance: 2, color: 'text-yellow-400', desc: '五行俱全，万法不侵' }
             ],
             elements: ['金', '木', '水', '火', '土', '风', '雷', '冰'],
             events: {
@@ -480,6 +478,7 @@
                     maxLifespan: 100,
                     root: null,
                     rootElement: '',
+                    rootRevealed: false,  // 新增：标记灵根是否已显示
                     luck: 50,
                     stones: 0,
                     pills: 0,
@@ -490,27 +489,27 @@
                 this.history = [];
                 this.isDead = false;
                 this.inTribulation = false;
+                this.awaitingRootChoice = false;  // 新增：标记是否在等待灵根选择
             }
 
             start() {
                 const nameInput = document.getElementById('input-name').value.trim();
                 this.player.name = nameInput || this.generateName();
                 
-                // 生成灵根
+                // 生成灵根（但先不显示）
                 this.generateSpiritRoot();
                 
                 // 隐藏开始界面
                 document.getElementById('start-screen').classList.add('hidden');
-                document.getElementById('action-buttons').classList.remove('hidden');
                 
                 this.updateUI();
                 this.log('你睁开了眼睛，开始了修仙之路...', 'system');
-                this.checkAgeEvents();
+                this.log('年满12岁时将进行灵根检测', 'info');
             }
 
             generateName() {
-                const surnames = ['李', '王', '张', '刘', '陈', '杨', '赵', '黄', '周', '吴', '徐', '孙', '胡', '朱', '高', '林'];
-                const names = ['逍遥', '长生', '悟道', '玄机', '凌霄', '御风', '天行', '若水', '无尘', '明月', '青松', '紫阳'];
+                const surnames = ['李', '王', '张', '刘', '陈', '杨', '赵', '黄', '周', '吴', '徐', '孙', '胡', '朱', '高', '林', '欧阳', '慕容', '司徒'];
+                const names = ['逍遥', '长生', '悟道', '玄机', '凌霄', '御风', '天行', '若水', '无尘', '明月', '青松', '紫阳', '寒霜', '烈阳', '星河'];
                 return surnames[Math.floor(Math.random() * surnames.length)] + names[Math.floor(Math.random() * names.length)];
             }
 
@@ -528,9 +527,8 @@
                 }
                 
                 this.player.root = selectedRoot;
-                this.player.rootElement = CONFIG.elements[Math.floor(Math.random() * 5)]; // 五行
+                this.player.rootElement = CONFIG.elements[Math.floor(Math.random() * 5)];
                 
-                // 根据灵根调整基础属性
                 if (selectedRoot.name === '混沌灵根') {
                     this.player.luck += 20;
                     this.player.maxLifespan += 50;
@@ -539,11 +537,18 @@
 
             nextYear() {
                 if (this.isDead) return;
+                if (this.awaitingRootChoice) {
+                    this.log('请先处理灵根觉醒！', 'warning');
+                    return;
+                }
                 
                 this.player.age++;
                 
-                // 年龄事件
-                this.checkAgeEvents();
+                // 检查年龄事件
+                if (this.checkAgeEvents()) {
+                    this.updateUI();
+                    return; // 有特殊事件，暂停常规流程
+                }
                 
                 // 自然恢复
                 this.player.health = Math.min(this.player.maxHealth, this.player.health + 5);
@@ -556,7 +561,7 @@
                 }
                 
                 // 随机事件
-                if (Math.random() < 0.3) {
+                if (Math.random() < 0.3 && this.player.age > 12) {
                     this.randomEvent();
                 }
                 
@@ -568,28 +573,55 @@
                 
                 if (age === 0) {
                     this.setScene('👶', '出生', '你出生在一个普通的凡人家庭。天地灵气未开，你尚不知修仙为何物。');
+                    return false;
                 } else if (age === 6) {
                     this.setScene('📚', '启蒙', '你开始接受启蒙教育，展现出过人的聪慧。');
-                } else if (age === 12 && this.player.realm === 0) {
-                    // 灵根检测
-                    this.setScene('✨', '灵根觉醒', `检测到${this.player.rootElement}属性${this.player.root.name}！${this.player.root.desc}`, [
-                        { text: '开始修炼', action: () => this.startCultivation() }
-                    ]);
+                    return false;
+                } else if (age === 12 && !this.player.rootRevealed) {
+                    // 灵根检测事件 - 关键修复点
+                    this.awaitingRootChoice = true;
+                    this.setScene(
+                        '✨', 
+                        '灵根觉醒', 
+                        `年满12岁，天地灵气汇聚！<br><br>
+                        <span class="text-yellow-400 text-xl">检测到${this.player.rootElement}属性${this.player.root.name}！</span><br>
+                        <span class="text-gray-400 text-sm">${this.player.root.desc}</span><br><br>
+                        <span class="text-cyan-400">修炼速度：${(this.player.root.quality * 100).toFixed(0)}%</span>`,
+                        [
+                            { 
+                                text: '开始修炼', 
+                                action: 'game.startCultivation()' 
+                            }
+                        ]
+                    );
+                    return true; // 暂停流程，等待用户点击
                 } else if (age === 18 && this.player.realm > 0) {
                     this.setScene('🗡️', '下山历练', '你已成年，可以下山历练，寻找机缘。');
+                    return false;
                 } else if (age % 10 === 0 && age > 20) {
-                    this.setScene('🎂', `大寿`, `你今年${age}岁了，修为已达${CONFIG.realms[this.player.realm].name}。`);
+                    this.setScene('🎂', `${age}岁大寿`, `你今年${age}岁了，修为已达${CONFIG.realms[this.player.realm].name}。`);
+                    return false;
                 }
+                return false;
             }
 
             startCultivation() {
+                // 关键修复：标记灵根已显示，并开始修炼
+                this.player.rootRevealed = true;
+                this.awaitingRootChoice = false;
                 this.player.realm = 1;
                 this.player.cultivation = 0;
                 this.player.maxLifespan = CONFIG.realms[1].lifespan;
                 this.player.lifespan = this.player.maxLifespan;
+                
+                this.log(`灵根觉醒：${this.player.rootElement}${this.player.root.name}！`, 'success');
                 this.log('引气入体成功，踏入炼气期！', 'success');
+                
+                // 显示操作按钮
+                document.getElementById('action-buttons').classList.remove('hidden');
+                
+                this.setScene('🧘', '炼气期', '你成功引气入体，正式踏入修仙之路。现在你可以通过下方按钮进行修炼。');
                 this.updateUI();
-                this.setScene('🧘', '炼气期', '你成功引气入体，正式踏入修仙之路。');
             }
 
             cultivate() {
@@ -606,22 +638,19 @@
                 this.player.cultivation += gain;
                 this.player.mental -= 2;
                 
-                // 修炼日志
                 const msgs = [
-                    `运转周天，吸收灵气，修为增加${gain}点`,
+                    `运转周天，吸收${this.player.rootElement}灵气，修为增加${gain}点`,
                     '感悟天道，心境略有提升',
-                    '经脉通畅，灵气运行如意'
+                    '经脉通畅，灵气运行如意',
+                    `${this.player.rootElement}气入体，浑身舒泰`
                 ];
                 this.log(msgs[Math.floor(Math.random() * msgs.length)], 'info');
                 
-                // 检查突破
-                this.checkBreakthrough();
-                
-                // 心魔检查
                 if (this.player.mental < 30 && Math.random() < 0.3) {
                     this.heartDevil();
                 }
                 
+                this.checkBreakthrough();
                 this.nextYear();
             }
 
@@ -690,12 +719,26 @@
                     return;
                 }
                 
-                // 进入突破界面
                 if (this.player.realm >= 3 && Math.random() < 0.5) {
                     this.showTribulation();
                 } else {
                     this.attemptBreakthrough();
                 }
+            }
+
+            usePill() {
+                if (this.player.pills <= 0) {
+                    this.log('没有丹药可用！', 'error');
+                    return;
+                }
+                
+                this.player.pills--;
+                const heal = 50;
+                const mental = 30;
+                this.player.health = Math.min(this.player.maxHealth, this.player.health + heal);
+                this.player.mental = Math.min(100, this.player.mental + mental);
+                this.log(`服用丹药，恢复${heal}点气血和${mental}点心境`, 'success');
+                this.updateUI();
             }
 
             showTribulation() {
@@ -765,40 +808,7 @@
                 this.player.health = this.player.maxHealth;
                 
                 this.log(`突破成功！踏入${newRealm.name}！寿元增加至${newRealm.lifespan}年`, 'success');
-                
-                if (this.player.realm === 10) {
-                    this.ascend();
-                }
-                
                 this.updateUI();
-            }
-
-            alchemy() {
-                if (this.player.stones < 50) {
-                    this.log('灵石不足，无法炼丹', 'error');
-                    return;
-                }
-                
-                this.player.stones -= 50;
-                const success = Math.random() < (0.4 + this.player.techniques * 0.1);
-                
-                if (success) {
-                    this.player.pills += 1;
-                    this.log('炼丹成功！获得一枚丹药', 'success');
-                } else {
-                    this.log('炼丹失败，材料尽毁', 'error');
-                    this.player.mental -= 5;
-                }
-                
-                this.nextYear();
-            }
-
-            checkBreakthrough() {
-                if (this.player.realm === 0) return;
-                const required = CONFIG.realms[this.player.realm].max;
-                if (this.player.cultivation >= required) {
-                    this.log('修为圆满，可以尝试突破下一境界！', 'warning');
-                }
             }
 
             heartDevil() {
@@ -822,7 +832,6 @@
                     const event = pool[Math.floor(Math.random() * pool.length)];
                     const result = event.effect();
                     
-                    // 应用效果
                     if (result.health) this.player.health = Math.min(this.player.maxHealth, this.player.health + result.health);
                     if (result.mental) this.player.mental = Math.min(100, this.player.mental + result.mental);
                     if (result.cultivation) this.player.cultivation += result.cultivation;
@@ -845,7 +854,7 @@
                 document.getElementById('end-desc').textContent = '你成功渡过九重天劫，羽化飞升，成为真仙！';
                 document.getElementById('end-age').textContent = this.player.age + '岁';
                 document.getElementById('end-realm').textContent = '真仙';
-                document.getElementById('end-root').textContent = this.player.root.name;
+                document.getElementById('end-root').textContent = this.player.rootElement + this.player.root.name;
                 document.getElementById('end-rank').textContent = 'S+ (完美飞升)';
             }
 
@@ -855,9 +864,9 @@
                 document.getElementById('end-desc').textContent = reason;
                 document.getElementById('end-age').textContent = this.player.age + '岁';
                 document.getElementById('end-realm').textContent = CONFIG.realms[this.player.realm].name;
-                document.getElementById('end-root').textContent = this.player.root.name;
+                document.getElementById('end-root').textContent = this.player.rootRevealed ? 
+                    (this.player.rootElement + this.player.root.name) : '未觉醒';
                 
-                // 计算评价
                 let rank = 'D';
                 if (this.player.realm >= 9) rank = 'A';
                 else if (this.player.realm >= 7) rank = 'B';
@@ -865,15 +874,13 @@
                 if (this.player.age < 100 && this.player.realm > 3) rank += '+';
                 
                 document.getElementById('end-rank').textContent = rank;
-                
-                // 变灰效果
                 document.getElementById('game-container').classList.add('dead');
             }
 
             setScene(icon, title, desc, actions = null) {
                 document.getElementById('scene-icon').textContent = icon;
                 document.getElementById('scene-title').textContent = title;
-                document.getElementById('scene-desc').textContent = desc;
+                document.getElementById('scene-desc').innerHTML = desc;
                 
                 const actionsDiv = document.getElementById('scene-actions');
                 if (actions) {
@@ -905,7 +912,6 @@
                 
                 logDiv.insertBefore(entry, logDiv.firstChild);
                 
-                // 限制日志数量
                 while (logDiv.children.length > 50) {
                     logDiv.removeChild(logDiv.lastChild);
                 }
@@ -918,22 +924,30 @@
             }
 
             updateUI() {
-                // 基础信息
                 document.getElementById('player-name').textContent = this.player.name;
                 document.getElementById('age-display').textContent = this.player.age + '岁';
                 
-                // 境界
                 const realm = CONFIG.realms[this.player.realm];
                 document.getElementById('realm-name').textContent = realm.name;
                 document.getElementById('realm-desc').textContent = realm.desc;
                 
-                // 灵根
-                document.getElementById('spirit-root').textContent = 
-                    this.player.realm === 0 ? '未检测' : `${this.player.rootElement}灵根`;
-                document.getElementById('root-quality').textContent = 
-                    this.player.root ? this.player.root.name : '';
+                // 关键修复：灵根显示逻辑
+                const rootDiv = document.getElementById('spirit-root');
+                const rootQualityDiv = document.getElementById('root-quality');
+                const rootPanel = document.getElementById('root-panel');
                 
-                // 属性条
+                if (!this.player.rootRevealed) {
+                    rootDiv.textContent = '未觉醒';
+                    rootDiv.className = 'text-lg font-bold text-gray-500';
+                    rootQualityDiv.textContent = '需年满12岁检测';
+                    rootPanel.classList.remove('border-yellow-400');
+                } else {
+                    rootDiv.textContent = `${this.player.rootElement}灵根`;
+                    rootDiv.className = `text-lg font-bold ${this.player.root.color} root-reveal`;
+                    rootQualityDiv.textContent = `${this.player.root.name} (修炼速度${(this.player.root.quality * 100).toFixed(0)}%)`;
+                    rootPanel.classList.add('border-yellow-400');
+                }
+                
                 const lifespanPercent = (this.player.lifespan / this.player.maxLifespan) * 100;
                 document.getElementById('lifespan-current').textContent = Math.floor(this.player.lifespan);
                 document.getElementById('lifespan-max').textContent = this.player.maxLifespan;
@@ -953,7 +967,6 @@
                 document.getElementById('mental-current').textContent = Math.floor(this.player.mental);
                 document.getElementById('mental-bar').style.width = this.player.mental + '%';
                 
-                // 资源
                 document.getElementById('resource-stones').textContent = this.player.stones;
                 document.getElementById('resource-pills').textContent = this.player.pills;
                 document.getElementById('resource-artifacts').textContent = this.player.artifacts;
@@ -961,7 +974,6 @@
             }
         }
 
-        // 启动游戏
         const game = new CultivationGame();
     </script>
 </body>
